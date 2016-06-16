@@ -1,0 +1,29 @@
+#!/usr/bin/env node
+
+var toPull = require('stream-to-pull-stream')
+var pull = require('pull-stream')
+var gitRemoteHelper = require('pull-git-remote-helper')
+var Mango = require('./mango.js')
+var url = require('url')
+
+function die () {
+  console.error.apply(console, arguments)
+  process.exit(1)
+}
+
+var args = process.argv.slice(2)
+if (args.length < 2) {
+  die('Usage: git-remote-mango <name> <url>')
+}
+
+var repo = url.parse(args[1])
+
+if (repo.protocol !== 'mango:') {
+  die('Invalid protocol')
+}
+
+pull(
+  toPull(process.stdin),
+  gitRemoteHelper(new Mango(repo.hostname, repo.auth)),
+  toPull(process.stdout)
+)

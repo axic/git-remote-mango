@@ -2,7 +2,7 @@
   "name": "git-remote-mango",
   "version": "0.0.1",
   "description": "Git remote helper for Mango",
-  "main": "mango.js",
+  "bin": "git-remote-mango",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

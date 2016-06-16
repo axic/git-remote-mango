@@ -1,6 +1,6 @@
 {
   "name": "git-remote-mango",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Git remote helper for Mango",
   "main": "mango.js",
   "scripts": {

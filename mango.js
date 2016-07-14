@@ -56,6 +56,24 @@ function Repo (address, user) {
   this.repoContract = this.web3.eth.contract(repoABI).at(address)
 }
 
+Repo.prototype.swarmPut = function (buf, enc, cb) {
+  this.web3.bzz.put(buf, 'application/mango+git', function (err, ret) {
+    if (err) {
+      return cb(err)
+    }
+    cb(null, ret)
+  })
+}
+
+Repo.prototype.swarmGet = function (key, cb) {
+  this.web3.bzz.get('bzz://' + key, function (err, ret) {
+    if (err) {
+      return cb(err)
+    }
+    cb(null, ret.content)
+  })
+}
+
 Repo.prototype._loadObjectMap = function (cb) {
   // console.error('LOADING OBJECT MAP')
   var self = this

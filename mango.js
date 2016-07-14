@@ -82,7 +82,7 @@ Repo.prototype._loadObjectMap = function (cb) {
     if (err) return cb(err)
 
     async.each(res, function (item, cb) {
-      ipfsGet(item, function (err, data) {
+      self.swarmGet(item, function (err, data) {
         if (err) return cb(err)
         Object.assign(self._objectMap, snapshot.parse(data))
         cb()
@@ -204,7 +204,7 @@ Repo.prototype.getObject = function (hash, cb) {
       return cb('Object not present with key ' + hash)
     }
 
-    ipfsGet(self._objectMap[hash], function (err, data) {
+    self.swarmGet(self._objectMap[hash], function (err, data) {
       if (err) return cb(err)
 
       var res = rlp.decode(data)
@@ -226,7 +226,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
 
   if (readObjects) {
     var doneReadingObjects = function () {
-      ipfsPut(snapshot.create(self._objectMap), null, function (err, ipfsHash) {
+      self.swarmPut(snapshot.create(self._objectMap), null, function (err, ipfsHash) {
         if (err) {
           return done(err)
         }
@@ -259,7 +259,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
 
           var data = rlp.encode([ ethUtil.toBuffer(object.type), ethUtil.toBuffer(object.length.toString()), buf ])
 
-          ipfsPut(data, null, function (err, ipfsHash) {
+          self.swarmPut(data, null, function (err, ipfsHash) {
             if (err) {
               return doneReadingObjects(err)
             }

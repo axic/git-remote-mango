@@ -30,6 +30,6 @@
     "pull-stream": "^3.4.2",
     "rlp": "^2.0.0",
     "stream-to-pull-stream": "^1.6.9",
-    "web3": "^0.16.0"
+    "web3": "^0.20.0"
   }
 }

@@ -18,26 +18,29 @@ function gitHash (obj, data) {
   return hasher.digest('hex')
 }
 
+function debug() {
+    console.error(...arguments)
+}
+
 // FIXME: move into context?
 function ipfsPut (buf, enc, cb) {
-  // console.error('-- IPFS PUT')
+    debug('-- IPFS PUT')
   ipfs.object.put(buf, { enc }, function (err, node) {
     if (err) {
       return cb(err)
     }
-
+    debug('  hash', node.toJSON().Hash)
     cb(null, node.toJSON().Hash)
   })
 }
 
 // FIXME: move into context?
 function ipfsGet (key, cb) {
-  // console.error('-- IPFS GET')
+  debug('-- IPFS GET', key)
   ipfs.object.get(key, { enc: 'base58' }, function (err, node) {
     if (err) {
       return cb(err)
     }
-
     cb(null, node.toJSON().Data)
   })
 }
@@ -45,7 +48,7 @@ function ipfsGet (key, cb) {
 module.exports = Repo
 
 function Repo (address, user) {
-  // console.error('LOADING REPO', address)
+  debug('LOADING REPO', address)
 
   this.web3 = new Web3(new Web3.providers.HttpProvider(process.env['ETHEREUM_RPC_URL'] || 'http://localhost:8545'))
   try {
@@ -57,7 +60,7 @@ function Repo (address, user) {
 }
 
 Repo.prototype._loadObjectMap = function (cb) {
-  // console.error('LOADING OBJECT MAP')
+  debug('LOADING OBJECT MAP')
   var self = this
   self._objectMap = {}
   self.snapshotGetAll(function (err, res) {
@@ -84,15 +87,15 @@ Repo.prototype._ensureObjectMap = function (cb) {
 }
 
 Repo.prototype.snapshotAdd = function (hash, cb) {
-  // console.error('SNAPSHOT ADD', hash)
+  debug('SNAPSHOT ADD', hash)
   this.repoContract.addSnapshot(hash, cb)
 }
 
 Repo.prototype.snapshotGetAll = function (cb) {
-  // console.error('SNAPSHOT GET ALL')
+  debug('SNAPSHOT GET ALL')
   var count = this.repoContract.snapshotCount().toNumber()
   var snapshots = []
-
+  debug('  REFCOUNT=', count)
   for (var i = 0; i < count; i++) {
     snapshots.push(this.repoContract.getSnapshot(i))
   }
@@ -101,25 +104,25 @@ Repo.prototype.snapshotGetAll = function (cb) {
 }
 
 Repo.prototype.contractGetRef = function (ref, cb) {
-  // console.error('REF GET', ref)
+  debug('REF GET', ref, cb)
   this.repoContract.getRef(ref, cb)
 }
 
 Repo.prototype.contractSetRef = function (ref, hash, cb) {
-  // console.error('REF SET', ref, hash)
+  debug('REF SET', ref, hash)
   this.repoContract.setRef(ref, hash, cb)
 }
 
 // FIXME: should be fully asynchronous
 Repo.prototype.contractAllRefs = function (cb) {
   var refcount = this.repoContract.refCount().toNumber()
-  // console.error('REFCOUNT', refcount)
+  debug('REFCOUNT', refcount)
 
   var refs = {}
   for (var i = 0; i < refcount; i++) {
     var key = this.repoContract.refName(i)
     refs[key] = this.repoContract.getRef(key)
-    // console.error('REF GET', i, key, refs[key])
+    debug('REF GET', i, key, refs[key])
   }
 
   cb(null, refs)
@@ -127,13 +130,13 @@ Repo.prototype.contractAllRefs = function (cb) {
 
 Repo.prototype.refs = function (prefix) {
   var refcount = this.repoContract.refCount().toNumber()
-  // console.error('REFCOUNT', refcount)
+  debug('REFCOUNT', refcount)
 
   var refs = {}
   for (var i = 0; i < refcount; i++) {
     var key = this.repoContract.refName(i)
     refs[key] = this.repoContract.getRef(key)
-    // console.error('REF GET', i, key, refs[key])
+    debug('REF GET', i, key, refs[key])
   }
 
   var refNames = Object.keys(refs)
@@ -166,10 +169,10 @@ Repo.prototype.symrefs = function (a) {
 Repo.prototype.hasObject = function (hash, cb) {
   var self = this
 
-  // console.error('HAS OBJ', hash)
+  debug('HAS OBJ', hash)
 
   this._ensureObjectMap(function () {
-    // console.error('HAS OBJ', hash in self._objectMap)
+    debug('HAS OBJ', hash in self._objectMap)
     cb(null, hash in self._objectMap)
   })
 }
@@ -177,7 +180,7 @@ Repo.prototype.hasObject = function (hash, cb) {
 Repo.prototype.getObject = function (hash, cb) {
   var self = this
 
-  // console.error('GET OBJ', hash)
+  debug('GET OBJ', hash)
 
   this._ensureObjectMap(function (err) {
     if (err) return cb(err)
@@ -201,7 +204,7 @@ Repo.prototype.getObject = function (hash, cb) {
 }
 
 Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
-  // console.error('UPDATE')
+  debug('UPDATE')
 
   var done = multicb({pluck: 1})
   var self = this
@@ -237,7 +240,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
           var buf = Buffer.concat(bufs)
           var hash = gitHash(object, buf)
 
-          // console.error('UPDATE OBJ', hash, object.type, object.length)
+          debug('UPDATE OBJ', hash, object.type, object.length)
 
           var data = rlp.encode([ ethUtil.toBuffer(object.type), ethUtil.toBuffer(object.length.toString()), buf ])
 
@@ -262,7 +265,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
         return doneReadingRefs(end === true ? null : end)
       }
 
-      // console.error('UPDATE REF', update.name, update.new, update.old)
+      debug('UPDATE REF', update.name, update.new, update.old)
 
       // FIXME: make this async
       var ref = self.repoContract.getRef(update.name)

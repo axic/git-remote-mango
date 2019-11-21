@@ -3,6 +3,7 @@ var pull = require('pull-stream')
 var multicb = require('multicb')
 var crypto = require('crypto')
 var IPFS = require('ipfs')
+var debug = require('debug')('mango')
 
 var ipfs;
 if (process.env['IPFS_PATH'] !== "") {
@@ -22,10 +23,6 @@ function gitHash (obj, data) {
   hasher.update(obj.type + ' ' + obj.length + '\0')
   hasher.update(data)
   return hasher.digest('hex')
-}
-
-function debug() {
-    console.error(...arguments)
 }
 
 // FIXME: move into context?

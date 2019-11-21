@@ -3,7 +3,13 @@ var pull = require('pull-stream')
 var multicb = require('multicb')
 var crypto = require('crypto')
 var IPFS = require('ipfs')
-var ipfs = new IPFS()
+
+var ipfs;
+if (process.env['IPFS_PATH'] !== "") {
+    ipfs = new IPFS(process.env['IPFS_PATH'])
+} else {
+    ipfs = new IPFS()
+}
 var Web3 = require('web3')
 var rlp = require('rlp')
 var ethUtil = require('ethereumjs-util')

@@ -29,8 +29,8 @@ function ipfsPut (buf, enc, cb) {
     if (err) {
       return cb(err)
     }
-    debug('  hash', node.toJSON().Hash)
-    cb(null, node.toJSON().Hash)
+    debug('  hash', node.toJSON().multihash)
+    cb(null, node.toJSON().multihash)
   })
 }
 
@@ -41,7 +41,7 @@ function ipfsGet (key, cb) {
     if (err) {
       return cb(err)
     }
-    cb(null, node.toJSON().Data)
+    cb(null, node.toJSON().data)
   })
 }
 

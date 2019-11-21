@@ -88,7 +88,7 @@ Repo.prototype._ensureObjectMap = function (cb) {
 
 Repo.prototype.snapshotAdd = function (hash, cb) {
   debug('SNAPSHOT ADD', hash)
-  this.repoContract.addSnapshot(hash, cb)
+  this.repoContract.addSnapshot(hash, {gas: 1000000}, cb)
 }
 
 Repo.prototype.snapshotGetAll = function (cb) {
@@ -103,14 +103,14 @@ Repo.prototype.snapshotGetAll = function (cb) {
   cb(null, snapshots)
 }
 
-Repo.prototype.contractGetRef = function (ref, cb) {
-  debug('REF GET', ref, cb)
-  this.repoContract.getRef(ref, cb)
+Repo.prototype.contractGetRef = function () {
+  debug('REF GET', ...arguments)
+  return this.repoContract.getRef(...arguments)
 }
 
-Repo.prototype.contractSetRef = function (ref, hash, cb) {
-  debug('REF SET', ref, hash)
-  this.repoContract.setRef(ref, hash, cb)
+Repo.prototype.contractSetRef = function () {
+  debug('REF SET', ...arguments)
+  return this.repoContract.setRef(...arguments)
 }
 
 // FIXME: should be fully asynchronous
@@ -121,7 +121,7 @@ Repo.prototype.contractAllRefs = function (cb) {
   var refs = {}
   for (var i = 0; i < refcount; i++) {
     var key = this.repoContract.refName(i)
-    refs[key] = this.repoContract.getRef(key)
+    refs[key] = this.contractGetRef(key)
     debug('REF GET', i, key, refs[key])
   }
 
@@ -135,7 +135,7 @@ Repo.prototype.refs = function (prefix) {
   var refs = {}
   for (var i = 0; i < refcount; i++) {
     var key = this.repoContract.refName(i)
-    refs[key] = this.repoContract.getRef(key)
+    refs[key] = this.contractGetRef(key)
     debug('REF GET', i, key, refs[key])
   }
 
@@ -268,7 +268,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
       debug('UPDATE REF', update.name, update.new, update.old)
 
       // FIXME: make this async
-      var ref = self.repoContract.getRef(update.name)
+      var ref = self.contractGetRef(update.name)
       if (typeof(ref) === 'string' && ref.length === 0) {
         ref = null
       }
@@ -284,7 +284,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
 
       if (update.new) {
         // FIXME: make this async
-        self.repoContract.setRef(update.name, update.new)
+          self.contractSetRef(update.name, update.new, {gas: 1000000})
       } else {
         // FIXME: make this async
         self.repoContract.deleteRef(update.name)

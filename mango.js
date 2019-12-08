@@ -48,9 +48,11 @@ function ipfsGet (key, cb) {
   })
 }
 
-module.exports = Repo
 
-function Repo (address, user) {
+
+class Repo {
+
+constructor(address, user) {
   debug('LOADING REPO', address)
 
   this.web3 = new Web3(new Web3.providers.HttpProvider(process.env['ETHEREUM_RPC_URL'] || 'http://localhost:8545'))
@@ -62,7 +64,7 @@ function Repo (address, user) {
   this.repoContract = this.web3.eth.contract(repoABI).at(address)
 }
 
-Repo.prototype._loadObjectMap = function (cb) {
+_loadObjectMap(cb) {
   debug('LOADING OBJECT MAP')
   var self = this
   self._objectMap = {}
@@ -81,7 +83,7 @@ Repo.prototype._loadObjectMap = function (cb) {
   })
 }
 
-Repo.prototype._ensureObjectMap = function (cb) {
+_ensureObjectMap(cb) {
   if (this._objectMap === undefined) {
     this._loadObjectMap(cb)
   } else {
@@ -89,12 +91,12 @@ Repo.prototype._ensureObjectMap = function (cb) {
   }
 }
 
-Repo.prototype.snapshotAdd = function (hash, cb) {
+snapshotAdd(hash, cb) {
   debug('SNAPSHOT ADD', hash)
   this.repoContract.addSnapshot(hash, {gas: 1000000}, cb)
 }
 
-Repo.prototype.snapshotGetAll = function (cb) {
+snapshotGetAll(cb) {
   debug('SNAPSHOT GET ALL')
   var count = this.repoContract.snapshotCount().toNumber()
   var snapshots = []
@@ -106,18 +108,18 @@ Repo.prototype.snapshotGetAll = function (cb) {
   cb(null, snapshots)
 }
 
-Repo.prototype.contractGetRef = function () {
+contractGetRef() {
   debug('REF GET', ...arguments)
   return this.repoContract.getRef(...arguments)
 }
 
-Repo.prototype.contractSetRef = function () {
+contractSetRef() {
   debug('REF SET', ...arguments)
   return this.repoContract.setRef(...arguments)
 }
 
 // FIXME: should be fully asynchronous
-Repo.prototype.contractAllRefs = function (cb) {
+contractAllRefs(cb) {
   var refcount = this.repoContract.refCount().toNumber()
   debug('REFCOUNT', refcount)
 
@@ -131,7 +133,7 @@ Repo.prototype.contractAllRefs = function (cb) {
   cb(null, refs)
 }
 
-Repo.prototype.refs = function (prefix) {
+refs(prefix) {
   var refcount = this.repoContract.refCount().toNumber()
   debug('REFCOUNT', refcount)
 
@@ -156,7 +158,7 @@ Repo.prototype.refs = function (prefix) {
 }
 
 // FIXME: this is hardcoded for HEAD -> master
-Repo.prototype.symrefs = function (a) {
+symrefs(a) {
   var i = 0
   return function (abort, cb) {
     if (abort) return
@@ -169,7 +171,7 @@ Repo.prototype.symrefs = function (a) {
   }
 }
 
-Repo.prototype.hasObject = function (hash, cb) {
+hasObject(hash, cb) {
   var self = this
 
   debug('HAS OBJ', hash)
@@ -180,7 +182,7 @@ Repo.prototype.hasObject = function (hash, cb) {
   })
 }
 
-Repo.prototype.getObject = function (hash, cb) {
+getObject(hash, cb) {
   var self = this
 
   debug('GET OBJ', hash)
@@ -206,7 +208,7 @@ Repo.prototype.getObject = function (hash, cb) {
   })
 }
 
-Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
+update(readRefUpdates, readObjects, cb) {
   debug('UPDATE')
 
   var done = multicb({pluck: 1})
@@ -304,3 +306,6 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
     cb()
   })
 }
+}
+
+module.exports = Repo

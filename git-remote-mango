@@ -22,8 +22,13 @@ if (repo.protocol !== 'mango:') {
   die('Invalid protocol')
 }
 
+async function main() {
+  await Mango.ready()
 pull(
   toPull(process.stdin),
   gitRemoteHelper(new Mango(repo.hostname, repo.auth)),
   toPull(process.stdout)
 )
+}
+
+main()

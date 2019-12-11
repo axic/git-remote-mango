@@ -4,12 +4,18 @@ var multicb = require('multicb')
 var crypto = require('crypto')
 var IPFS = require('ipfs')
 var debug = require('debug')('mango')
+const CID = require('cids')
 
 var ipfs;
 if (process.env['IPFS_PATH'] !== "") {
-    ipfs = new IPFS(process.env['IPFS_PATH'])
+    ipfs = new IPFS({
+      'repo': process.env['IPFS_PATH'],
+      'start': false
+    })
 } else {
-    ipfs = new IPFS()
+    ipfs = new IPFS({
+      'start': false
+    })
 }
 var Web3 = require('web3')
 var rlp = require('rlp')
@@ -32,8 +38,8 @@ function ipfsPut (buf, enc, cb) {
     if (err) {
       return cb(err)
     }
-    debug('  hash', node.toJSON().multihash)
-    cb(null, node.toJSON().multihash)
+    debug('  hash', node.toString())
+    cb(null, node.toString())
   })
 }
 
@@ -62,6 +68,10 @@ constructor(address, user) {
   }
 
   this.repoContract = this.web3.eth.contract(repoABI).at(address)
+}
+
+static async ready() {
+  await ipfs.ready
 }
 
 _loadObjectMap(cb) {

@@ -13,7 +13,7 @@ exports.create = function (files) {
 exports.parse = function (manifest) {
   var ret = rlp.decode(manifest)
 
-  if (!ret.shift().equals(new Buffer([ 1 ]))) {
+  if (!ret.shift().equals(Buffer.from([ 1 ]))) {
     throw new Error('Invalid manifest')
   }
 

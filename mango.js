@@ -3,7 +3,20 @@ var pull = require('pull-stream')
 var multicb = require('multicb')
 var crypto = require('crypto')
 var IPFS = require('ipfs')
-var ipfs = new IPFS()
+var debug = require('debug')('mango')
+const CID = require('cids')
+
+var ipfs;
+if (process.env['IPFS_PATH'] !== "") {
+    ipfs = new IPFS({
+      'repo': process.env['IPFS_PATH'],
+      'start': false
+    })
+} else {
+    ipfs = new IPFS({
+      'start': false
+    })
+}
 var Web3 = require('web3')
 var rlp = require('rlp')
 var ethUtil = require('ethereumjs-util')
@@ -20,32 +33,33 @@ function gitHash (obj, data) {
 
 // FIXME: move into context?
 function ipfsPut (buf, enc, cb) {
-  // console.error('-- IPFS PUT')
+    debug('-- IPFS PUT')
   ipfs.object.put(buf, { enc }, function (err, node) {
     if (err) {
       return cb(err)
     }
-
-    cb(null, node.toJSON().Hash)
+    debug('  hash', node.toString())
+    cb(null, node.toString())
   })
 }
 
 // FIXME: move into context?
 function ipfsGet (key, cb) {
-  // console.error('-- IPFS GET')
+  debug('-- IPFS GET', key)
   ipfs.object.get(key, { enc: 'base58' }, function (err, node) {
     if (err) {
       return cb(err)
     }
-
-    cb(null, node.toJSON().Data)
+    cb(null, node.toJSON().data)
   })
 }
 
-module.exports = Repo
 
-function Repo (address, user) {
-  // console.error('LOADING REPO', address)
+
+class Repo {
+
+constructor(address, user) {
+  debug('LOADING REPO', address)
 
   this.web3 = new Web3(new Web3.providers.HttpProvider(process.env['ETHEREUM_RPC_URL'] || 'http://localhost:8545'))
   try {
@@ -56,8 +70,12 @@ function Repo (address, user) {
   this.repoContract = this.web3.eth.contract(repoABI).at(address)
 }
 
-Repo.prototype._loadObjectMap = function (cb) {
-  // console.error('LOADING OBJECT MAP')
+static async ready() {
+  await ipfs.ready
+}
+
+_loadObjectMap(cb) {
+  debug('LOADING OBJECT MAP')
   var self = this
   self._objectMap = {}
   self.snapshotGetAll(function (err, res) {
@@ -75,7 +93,7 @@ Repo.prototype._loadObjectMap = function (cb) {
   })
 }
 
-Repo.prototype._ensureObjectMap = function (cb) {
+_ensureObjectMap(cb) {
   if (this._objectMap === undefined) {
     this._loadObjectMap(cb)
   } else {
@@ -83,16 +101,16 @@ Repo.prototype._ensureObjectMap = function (cb) {
   }
 }
 
-Repo.prototype.snapshotAdd = function (hash, cb) {
-  // console.error('SNAPSHOT ADD', hash)
-  this.repoContract.addSnapshot(hash, cb)
+snapshotAdd(hash, cb) {
+  debug('SNAPSHOT ADD', hash)
+  this.repoContract.addSnapshot(hash, {gas: 1000000}, cb)
 }
 
-Repo.prototype.snapshotGetAll = function (cb) {
-  // console.error('SNAPSHOT GET ALL')
+snapshotGetAll(cb) {
+  debug('SNAPSHOT GET ALL')
   var count = this.repoContract.snapshotCount().toNumber()
   var snapshots = []
-
+  debug('  REFCOUNT=', count)
   for (var i = 0; i < count; i++) {
     snapshots.push(this.repoContract.getSnapshot(i))
   }
@@ -100,40 +118,40 @@ Repo.prototype.snapshotGetAll = function (cb) {
   cb(null, snapshots)
 }
 
-Repo.prototype.contractGetRef = function (ref, cb) {
-  // console.error('REF GET', ref)
-  this.repoContract.getRef(ref, cb)
+contractGetRef() {
+  debug('REF GET', ...arguments)
+  return this.repoContract.getRef(...arguments)
 }
 
-Repo.prototype.contractSetRef = function (ref, hash, cb) {
-  // console.error('REF SET', ref, hash)
-  this.repoContract.setRef(ref, hash, cb)
+contractSetRef() {
+  debug('REF SET', ...arguments)
+  return this.repoContract.setRef(...arguments)
 }
 
 // FIXME: should be fully asynchronous
-Repo.prototype.contractAllRefs = function (cb) {
+contractAllRefs(cb) {
   var refcount = this.repoContract.refCount().toNumber()
-  // console.error('REFCOUNT', refcount)
+  debug('REFCOUNT', refcount)
 
   var refs = {}
   for (var i = 0; i < refcount; i++) {
     var key = this.repoContract.refName(i)
-    refs[key] = this.repoContract.getRef(key)
-    // console.error('REF GET', i, key, refs[key])
+    refs[key] = this.contractGetRef(key)
+    debug('REF GET', i, key, refs[key])
   }
 
   cb(null, refs)
 }
 
-Repo.prototype.refs = function (prefix) {
+refs(prefix) {
   var refcount = this.repoContract.refCount().toNumber()
-  // console.error('REFCOUNT', refcount)
+  debug('REFCOUNT', refcount)
 
   var refs = {}
   for (var i = 0; i < refcount; i++) {
     var key = this.repoContract.refName(i)
-    refs[key] = this.repoContract.getRef(key)
-    // console.error('REF GET', i, key, refs[key])
+    refs[key] = this.contractGetRef(key)
+    debug('REF GET', i, key, refs[key])
   }
 
   var refNames = Object.keys(refs)
@@ -150,7 +168,7 @@ Repo.prototype.refs = function (prefix) {
 }
 
 // FIXME: this is hardcoded for HEAD -> master
-Repo.prototype.symrefs = function (a) {
+symrefs(a) {
   var i = 0
   return function (abort, cb) {
     if (abort) return
@@ -163,21 +181,21 @@ Repo.prototype.symrefs = function (a) {
   }
 }
 
-Repo.prototype.hasObject = function (hash, cb) {
+hasObject(hash, cb) {
   var self = this
 
-  // console.error('HAS OBJ', hash)
+  debug('HAS OBJ', hash)
 
   this._ensureObjectMap(function () {
-    // console.error('HAS OBJ', hash in self._objectMap)
+    debug('HAS OBJ', hash in self._objectMap)
     cb(null, hash in self._objectMap)
   })
 }
 
-Repo.prototype.getObject = function (hash, cb) {
+getObject(hash, cb) {
   var self = this
 
-  // console.error('GET OBJ', hash)
+  debug('GET OBJ', hash)
 
   this._ensureObjectMap(function (err) {
     if (err) return cb(err)
@@ -200,8 +218,8 @@ Repo.prototype.getObject = function (hash, cb) {
   })
 }
 
-Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
-  // console.error('UPDATE')
+update(readRefUpdates, readObjects, cb) {
+  debug('UPDATE')
 
   var done = multicb({pluck: 1})
   var self = this
@@ -237,7 +255,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
           var buf = Buffer.concat(bufs)
           var hash = gitHash(object, buf)
 
-          // console.error('UPDATE OBJ', hash, object.type, object.length)
+          debug('UPDATE OBJ', hash, object.type, object.length)
 
           var data = rlp.encode([ ethUtil.toBuffer(object.type), ethUtil.toBuffer(object.length.toString()), buf ])
 
@@ -262,10 +280,10 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
         return doneReadingRefs(end === true ? null : end)
       }
 
-      // console.error('UPDATE REF', update.name, update.new, update.old)
+      debug('UPDATE REF', update.name, update.new, update.old)
 
       // FIXME: make this async
-      var ref = self.repoContract.getRef(update.name)
+      var ref = self.contractGetRef(update.name)
       if (typeof(ref) === 'string' && ref.length === 0) {
         ref = null
       }
@@ -281,7 +299,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
 
       if (update.new) {
         // FIXME: make this async
-        self.repoContract.setRef(update.name, update.new)
+          self.contractSetRef(update.name, update.new, {gas: 1000000})
       } else {
         // FIXME: make this async
         self.repoContract.deleteRef(update.name)
@@ -298,3 +316,6 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
     cb()
   })
 }
+}
+
+module.exports = Repo
